@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ikigai Supply Chain Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f7f7f5; --card:#ffffff; --ink:#1c1c1a; --muted:#6b6b66; --line:#e6e6e1;
+  --accent:#2f6f4e; --accentbg:#eaf3ee;
+  --red:#c0392b; --redbg:#fbeae8;
+  --amber:#b7791f; --amberbg:#fdf3e2;
+  --green:#2f7d4f; --greenbg:#e8f3ec;
+  --blue:#2b5b9e; --bluebg:#e9f0fa;
+  --gray:#6b6b66; --graybg:#efefec;
+  --purple:#6b4a9e; --purplebg:#f0eafa;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 20px 60px}
+h1{font-size:20px;margin:0 0 2px}
+h2{font-size:15px;margin:0;letter-spacing:.2px}
+.sub{color:var(--muted);font-size:12px}
+.section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-top:16px}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 14px}
+.kpi .label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.kpi .value{font-size:22px;font-weight:650;margin-top:6px}
+.kpi .delta{font-size:12px;margin-top:3px;color:var(--muted)}
+.delta.up{color:var(--green)} .delta.down{color:var(--red)}
+/* sales cards */
+.scard{border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:14px;background:#fff}
+.scard-label{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.scard-top{display:flex;flex-wrap:wrap;gap:14px 40px;align-items:flex-start}
+.hero-val{font-size:32px;font-weight:680;line-height:1.05}
+.hero-val.sm{font-size:26px}
+.hero-sub{font-size:12px;color:var(--muted);margin-top:7px;max-width:360px}
+.stat-l{font-size:12px;color:var(--muted)}
+.stat-v{font-size:22px;font-weight:640;margin-top:4px}
+.stat-sub{font-size:12px;color:var(--muted);margin-top:5px}
+.scard-foot{font-size:12px;color:var(--muted);margin-top:16px;border-top:1px solid var(--line);padding-top:11px}
+.livedot{width:10px;height:10px;border-radius:50%;background:#28a745;box-shadow:0 0 0 3px rgba(40,167,69,.18);display:inline-block}
+.pos{color:var(--green);font-weight:600}.neg{color:var(--red);font-weight:600}
+.baseline{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);cursor:pointer;user-select:none;white-space:nowrap}
+th.num,td.num{text-align:right}
+tbody tr:hover{background:#faf9f6}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
+.t-red{background:var(--redbg);color:var(--red)}
+.t-amber{background:var(--amberbg);color:var(--amber)}
+.t-green{background:var(--greenbg);color:var(--green)}
+.t-blue{background:var(--bluebg);color:var(--blue)}
+.t-gray{background:var(--graybg);color:var(--gray)}
+.t-purple{background:var(--purplebg);color:var(--purple)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 11px;font-size:12px;cursor:pointer;color:var(--muted)}
+.chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+/* inventory family groups */
+.fam{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden}
+.fam-head{display:grid;grid-template-columns:22px 1.5fr .8fr .8fr .8fr .55fr;gap:10px;align-items:center;padding:10px 12px;cursor:pointer;background:#fafaf8}
+.fam-head:hover{background:#f3f3ef}
+.fam-name{font-weight:640;font-size:14px}
+.fam-metric .m-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.fam-metric .m-v{font-size:15px;font-weight:620;margin-top:2px}
+.caret{color:var(--muted);transition:transform .15s;font-size:11px}
+.fam.open .caret{transform:rotate(90deg)}
+.fam-body{display:none;padding:2px 6px 8px;background:#fff}
+.fam.open .fam-body{display:block}
+.countchips{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+.cc{font-size:10px;padding:1px 7px;border-radius:999px;font-weight:600}
+.alertbar{background:var(--redbg);border:1px solid #f0c9c3;border-radius:12px;padding:12px 16px;margin-top:16px}
+.alertbar.ok{background:var(--greenbg);border-color:#c9e2d1}
+.alertbar h2{margin-bottom:6px}
+.alert-item{font-size:13px;padding:3px 0;border-bottom:1px dashed #f0c9c3}
+.alert-item:last-child{border-bottom:none}
+.muted{color:var(--muted)}
+.loading{color:var(--muted);font-style:italic;padding:10px 0}
+.err{color:var(--red);font-size:12px;padding:8px 0}
+.chartbox{position:relative;height:230px}
+.scroll{overflow:visible}
+.small{font-size:12px}
+.right{text-align:right}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.dot{width:9px;height:9px;border-radius:50%}
+@media(max-width:820px){.kpis{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1>🧭 Ikigai Supply Chain Dashboard</h1>
+    <div class="sub" id="asof">Loading live data…</div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="alertbar" id="alertbar"><div class="loading">Scanning for issues…</div></div>
+
+  <!-- SALES -->
+  <div class="section" id="salesSection">
+    <!-- Card 1: Yesterday -->
+    <div class="scard">
+      <div class="scard-label">Yesterday's Sales</div>
+      <div class="scard-top">
+        <div>
+          <div class="stat-l">Total Sales</div>
+          <div class="baseline"><div class="hero-val" id="y_total">—</div><span id="y_vsprior"></span></div>
+          <div class="hero-sub" id="y_vs7"></div>
+        </div>
+        <div><div class="stat-l">Orders</div><div class="stat-v" id="y_orders">—</div></div>
+        <div><div class="stat-l">Avg Order Value</div><div class="stat-v" id="y_aov">—</div></div>
+        <div><div class="stat-l">Gross Sales</div><div class="stat-v" id="y_gross">—</div></div>
+      </div>
+      <div class="chartbox" style="margin-top:16px"><canvas id="salesChart"></canvas></div>
+    </div>
+    <!-- Card 2: Today so far -->
+    <div class="scard">
+      <div class="scard-label"><span class="livedot"></span> Today's Sales — So Far (Store / Eastern Time)</div>
+      <div class="scard-top">
+        <div>
+          <div class="stat-l">Total Sales (so far)</div>
+          <div class="hero-val" id="t_total">—</div>
+          <div class="hero-sub" id="t_asof"></div>
+        </div>
+        <div><div class="stat-l">Orders</div><div class="stat-v" id="t_orders">—</div></div>
+        <div><div class="stat-l">Avg Order Value</div><div class="stat-v" id="t_aov">—</div></div>
+        <div><div class="stat-l">Gross Sales</div><div class="stat-v" id="t_gross">—</div></div>
+        <div><div class="stat-l">Projected full day (if pace holds)</div><div class="baseline"><div class="stat-v" id="t_proj">—</div><span id="t_projdelta"></span></div></div>
+      </div>
+      <div class="scard-foot" id="t_foot"></div>
+    </div>
+    <!-- Card 3: Monthly -->
+    <div class="scard">
+      <div class="scard-label">Monthly Sales — Last Month vs Month-to-Date (Store / Eastern Time)</div>
+      <div class="scard-top">
+        <div><div class="stat-l" id="m_lastlabel">Last Month</div><div class="hero-val sm" id="m_last">—</div><div class="stat-sub" id="m_lastsub"></div></div>
+        <div><div class="stat-l" id="m_mtdlabel">Month-to-Date</div><div class="hero-val sm" id="m_mtd">—</div><div class="stat-sub" id="m_mtdsub"></div></div>
+        <div><div class="stat-l">Projected (if MTD pace holds)</div><div class="baseline"><div class="hero-val sm" id="m_proj">—</div><span id="m_projdelta"></span></div></div>
+      </div>
+    </div>
+    <!-- Top movers -->
+    <div style="margin-top:4px">
+      <div class="sub" style="margin-bottom:6px">Top movers today (by net sales)</div>
+      <div id="topmovers"><div class="loading">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- INVENTORY -->
+  <div class="section">
+    <div class="section-head">
+      <div><h2>📦 Inventory — Days on Hand</h2><div class="sub">Shopify on-hand ÷ 90-day velocity · by product family (SPC singles + AM-PM pairs)</div></div>
+    </div>
+    <div class="chips" id="invfilters"></div>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--red)"></i>Out of stock</span>
+      <span><i class="dot" style="background:var(--amber)"></i>Low &lt; 30 days</span>
+      <span><i class="dot" style="background:var(--green)"></i>Healthy 30–120 days</span>
+      <span><i class="dot" style="background:var(--blue)"></i>Overstock &gt; 120 days</span>
+      <span><i class="dot" style="background:var(--gray)"></i>No recent sales</span>
+      <span><i class="dot" style="background:var(--purple)"></i>Pre-launch</span>
+    </div>
+    <div class="sub" style="margin-top:6px">⚡ Velocity window follows the SKU Code Master. Evergreen &amp; Secret Menu colors use 90-day velocity; Re-launch, Seasonal &amp; Previous-launch colors use days since their launch/season start (capped at 90, snapped to 15/30/60/90-day). Future-launch colors that haven't started selling show as Pre-launch. MagNano Pill 2P (AM-PM) also caps at 30-day while ramping. Seasonal colors that are out of stock while out of season are flagged Off-season and are not counted as stockouts; evergreen colors always count.</div>
+    <div class="scroll" style="margin-top:10px"><div id="invtable"><div class="loading">Loading inventory…</div></div></div>
+  </div>
+
+  <!-- SHIPMENTS -->
+  <div class="section">
+    <div class="section-head">
+      <div><h2>🚚 Shipment Tracker</h2><div class="sub">Notion · incoming to Ikigai WHS</div></div>
+    </div>
+    <div id="shiptable"><div class="loading">Loading shipments…</div></div>
+  </div>
+
+  <!-- PRODUCTION -->
+  <div class="section">
+    <div class="section-head">
+      <div><h2>🏭 Production Tracker</h2><div class="sub">Notion · active production runs</div></div>
+    </div>
+    <div id="prodtable"><div class="loading">Loading production…</div></div>
+  </div>
+
+  <div class="sub" style="margin-top:18px">Data pulls live from Shopify, ShipHero &amp; Notion each time this page opens. Use the header Reload button to refresh.</div>
+</div>
+
+<script>
+// ---------- config ----------
+const T = {
+  shopify: "mcp__f682ee8f-7079-4733-9d67-a5c26ff3bf70__run-analytics-query",
+  shiphero: "mcp__5ff43ee4-c76a-4eb4-a8a9-c56ba0520faa__shiphero_list_warehouse_products",
+  notion: "mcp__989f9ae5-b8d0-426b-8596-e850e66433b8__notion-query-data-sources",
+};
+const SHIP_DS = "collection://1f25560a-73f5-8070-8334-000bc906a44e";   // Shipment Tracker
+const PROD_DS = "collection://2335560a-73f5-81a5-ad90-000b0e6dd74a";   // Production Tracking
+const SUP_DS  = "collection://21b5560a-73f5-814c-9fd3-000bc9c3c966";   // Supplier Database
+const PR_DS   = "collection://2335560a-73f5-8069-ad99-000bcf6aadf6";   // Project Tracker (PR#)
+const SHIP_VIEW = "https://app.notion.com/1f25560a73f580b79d6ac7e28fff5878?v=25f5560a73f580a69de4000cf00db935"; // "Incoming Shipments" view (active, all suppliers)
+const BSH_VIEW  = "https://app.notion.com/1f25560a73f580b79d6ac7e28fff5878?v=2335560a73f580dd81b5000cbda31e6d"; // "BSH Only" view (all statuses incl. Delivered) — source for recently delivered
+const PRIMARY_WH = "V2FyZWhvdXNlOjEyNzExMQ==";                          // ShipHero Primary warehouse
+// days-on-hand thresholds (user-selected): OOS / <30 / 30-120 / >120
+const LOW_MAX = 30, HEALTHY_MAX = 120;
+
+const TODAY = new Date();
+const pad = n => String(n).padStart(2,"0");
+const localISO = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; // local, no UTC shift
+const iso = localISO;
+const firstOfMonth = `${TODAY.getFullYear()}-${pad(TODAY.getMonth()+1)}-01`;
+const today0 = new Date(localISO(TODAY)+"T00:00:00");
+
+// ---------- helpers ----------
+const fmtMoney = n => n==null||isNaN(n) ? "—" : "$"+Math.round(n).toLocaleString();
+const fmtNum = n => n==null||isNaN(n) ? "—" : Math.round(n).toLocaleString();
+const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+async function call(name, args, tries=3){
+  let lastErr;
+  for(let i=0;i<tries;i++){
+    try{
+      const r = await window.cowork.callMcpTool(name, args);
+      if(r && r.isError){ lastErr = new Error((r.content&&r.content[0]&&r.content[0].text)||"tool error"); }
+      else return r;
+    }catch(e){ lastErr = e; }
+    await new Promise(res=>setTimeout(res, 1200*(i+1)));
+  }
+  throw lastErr || new Error("call failed");
+}
+// unwrap the {content, structuredContent} envelope into a JS object
+function unwrap(r){
+  let d = r && (r.structuredContent!==undefined ? r.structuredContent : null);
+  if(d==null && r && r.content && r.content[0] && r.content[0].text){
+    try{ d = JSON.parse(r.content[0].text); }catch(_){ d = r.content[0].text; }
+  }
+  // ShipHero nests a JSON string under .result
+  if(d && typeof d==="object" && typeof d.result==="string"){
+    try{ d = JSON.parse(d.result); }catch(_){}
+  }
+  return d;
+}
+function shopifyRows(d){
+  if(!d || !d.rows) return {cols:[],rows:[]};
+  return {cols:(d.columns||[]).map(c=>c.name), rows:d.rows};
+}
+
+// ---------- SALES ----------
+async function loadSales(){
+  try{
+    const [trendR, todayR] = await Promise.all([
+      call(T.shopify,{query:"FROM sales SHOW total_sales, orders, average_order_value, gross_sales TIMESERIES day SINCE -9d UNTIL today"}),
+      call(T.shopify,{query:"FROM sales SHOW total_sales, orders, average_order_value, gross_sales SINCE today UNTIL today"}),
+    ]);
+    const tr = shopifyRows(unwrap(trendR)).rows; // [day,total,orders,aov,gross]
+    if(!tr.length) throw new Error("no sales data");
+    const N=tr.length;
+    const todayRow = tr[N-1];        // store-today (partial), also last chart point
+    const yday = tr[N-2] || todayRow;// yesterday (ET -1d)
+    const prior = tr[N-3] || null;   // day before yesterday
+    // 7-day avg of total_sales for the 7 days ending yesterday
+    const seven = tr.slice(Math.max(0,N-8), N-1);
+    const avg7 = seven.length ? seven.reduce((s,r)=>s+(+r[1]||0),0)/seven.length : 0;
+
+    // --- Yesterday card ---
+    const yTotal=+yday[1], yOrders=+yday[2], yAov=+yday[3], yGross=+yday[4];
+    document.getElementById("y_total").textContent=fmtMoney(yTotal);
+    document.getElementById("y_orders").textContent=fmtNum(yOrders);
+    document.getElementById("y_aov").textContent=fmtMoney(yAov);
+    document.getElementById("y_gross").textContent=fmtMoney(yGross);
+    if(prior){ const p=+prior[1]; if(p>0){ const d=(yTotal-p)/p*100; document.getElementById("y_vsprior").innerHTML=`<span class="${d>=0?'pos':'neg'}">${d>=0?'+':''}${d.toFixed(0)}% vs prior day</span>`; } }
+    if(avg7>0){ const d=(yTotal-avg7)/avg7*100; document.getElementById("y_vs7").innerHTML=`<span class="${d>=0?'pos':'neg'}">${d>=0?'+':''}${d.toFixed(0)}% vs 7-day avg</span> (${fmtMoney(avg7)})`; }
+
+    // trend chart (total sales)
+    drawChart(tr.map(r=>r[0].slice(5)), tr.map(r=>+r[1]));
+
+    // --- Today card ---
+    const td = shopifyRows(unwrap(todayR)).rows[0] || [0,0,0,0];
+    const tToday=+td[0];
+    document.getElementById("t_total").textContent=fmtMoney(tToday);
+    document.getElementById("t_orders").textContent=fmtNum(+td[1]);
+    document.getElementById("t_aov").textContent=fmtMoney(+td[2]);
+    document.getElementById("t_gross").textContent=fmtMoney(+td[3]);
+    // projected full day: extrapolate today's run-rate by fraction of the ET day elapsed (fall back to 7-day avg before ~2:30am ET)
+    const etClock=new Date().toLocaleTimeString('en-GB',{timeZone:'America/New_York',hour12:false}); // "HH:MM:SS"
+    const [eh,em,esec]=etClock.split(':').map(Number);
+    const frac=(eh*3600+em*60+(esec||0))/86400;
+    let tProj = frac>=0.10 ? tToday/frac : Math.max(tToday, avg7);
+    tProj = Math.max(tProj, tToday);
+    document.getElementById("t_proj").textContent=fmtMoney(tProj);
+    if(avg7>0){ const d=(tProj-avg7)/avg7*100; document.getElementById("t_projdelta").innerHTML=`<span class="${d>=0?'pos':'neg'}">${d>=0?'+':''}${d.toFixed(0)}% vs 7-day avg</span>`; }
+    const storeToday = new Date(todayRow[0]+"T00:00:00");
+    const etNow = new Date().toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'});
+    const dstr = storeToday.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+    document.getElementById("t_asof").textContent = `${dstr} · as of ${etNow} ET`;
+    document.getElementById("t_foot").innerHTML = `Day in progress — figures grow through the day. For reference: yesterday finished at <b>${fmtMoney(yTotal)}</b> (${fmtNum(yOrders)} orders); trailing 7-day avg <b>${fmtMoney(avg7)}</b>/day.`;
+
+    // --- Monthly + top movers ---
+    loadMonthly(storeToday);
+    loadTopMovers();
+  }catch(e){
+    const f=document.getElementById("t_foot"); if(f) f.innerHTML=`<span class="err">Sales data unavailable: ${esc(e.message)}</span>`;
+  }
+}
+async function loadMonthly(storeToday){
+  try{
+    const y=storeToday.getFullYear(), m0=storeToday.getMonth(), dayNum=storeToday.getDate();
+    const firstThis=`${y}-${pad(m0+1)}-01`;
+    const lm=new Date(y,m0,0);                 // last day of previous month
+    const firstLast=`${lm.getFullYear()}-${pad(lm.getMonth()+1)}-01`;
+    const lastLast=`${lm.getFullYear()}-${pad(lm.getMonth()+1)}-${pad(lm.getDate())}`;
+    const daysInMonth=new Date(y,m0+1,0).getDate();
+    const [lastR, mtdR]=await Promise.all([
+      call(T.shopify,{query:`FROM sales SHOW total_sales, orders, net_sales SINCE ${firstLast} UNTIL ${lastLast}`}),
+      call(T.shopify,{query:`FROM sales SHOW total_sales, orders, net_sales SINCE ${firstThis} UNTIL today`}),
+    ]);
+    const L=shopifyRows(unwrap(lastR)).rows[0]||[0,0,0];
+    const M=shopifyRows(unwrap(mtdR)).rows[0]||[0,0,0];
+    const lastTotal=+L[0], mtdTotal=+M[0];
+    const proj = dayNum>0 ? mtdTotal/dayNum*daysInMonth : 0;
+    const lmName=lm.toLocaleDateString('en-US',{month:'long'});
+    const tmName=storeToday.toLocaleDateString('en-US',{month:'long'});
+    document.getElementById("m_lastlabel").textContent=`Last Month · ${lmName}`;
+    document.getElementById("m_last").textContent=fmtMoney(lastTotal);
+    document.getElementById("m_lastsub").textContent=`${fmtNum(+L[1])} orders · ${fmtMoney(+L[2])} net`;
+    document.getElementById("m_mtdlabel").textContent=`${tmName} Month-to-Date (day ${dayNum})`;
+    document.getElementById("m_mtd").textContent=fmtMoney(mtdTotal);
+    document.getElementById("m_mtdsub").textContent=`${fmtNum(+M[1])} orders · ${fmtMoney(+M[2])} net`;
+    document.getElementById("m_proj").textContent=fmtMoney(proj);
+    if(lastTotal>0){ const d=(proj-lastTotal)/lastTotal*100; document.getElementById("m_projdelta").innerHTML=`<span class="${d>=0?'pos':'neg'}">${d>=0?'↑':'↓'} ${Math.abs(d).toFixed(0)}% vs last mo</span>`; }
+  }catch(e){ document.getElementById("m_proj").textContent="—"; }
+}
+async function loadTopMovers(){
+  try{
+    const r=await call(T.shopify,{query:"FROM sales SHOW net_sales, orders GROUP BY product_title ORDER BY net_sales DESC LIMIT 8 SINCE today UNTIL today"});
+    renderTopMovers(shopifyRows(unwrap(r)).rows);
+  }catch(e){ document.getElementById("topmovers").innerHTML=`<div class="err">${esc(e.message)}</div>`; }
+}
+let chart;
+function drawChart(labels, data){
+  const ctx = document.getElementById("salesChart");
+  if(chart) chart.destroy();
+  chart = new Chart(ctx,{
+    type:"line",
+    data:{labels,datasets:[{data,borderColor:"#2f6f4e",backgroundColor:"rgba(47,111,78,.12)",fill:true,tension:.3,pointRadius:0,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtMoney(c.parsed.y)}}},
+      scales:{y:{ticks:{callback:v=>"$"+(v/1000)+"k"},grid:{color:"#eee"}},x:{grid:{display:false},ticks:{maxTicksLimit:10}}}}
+  });
+}
+function renderTopMovers(rows){
+  if(!rows||!rows.length){document.getElementById("topmovers").innerHTML='<div class="muted small">No sales recorded yet today.</div>';return;}
+  let h='<table><thead><tr><th>Product</th><th class="num">Net sales</th><th class="num">Orders</th></tr></thead><tbody>';
+  rows.forEach(r=>{h+=`<tr><td>${esc(r[0])}</td><td class="num">${fmtMoney(+r[1])}</td><td class="num">${fmtNum(+r[2])}</td></tr>`;});
+  h+='</tbody></table>';
+  document.getElementById("topmovers").innerHTML=h;
+}
+
+// ---------- INVENTORY ----------
+const FAMILY = {
+  MGN2P:"MagNano Pill 2P (AM-PM)", MGN1P:"MagNano Pill 1P",
+  WAPPC2:"Weekly AM-PM Pill 2.0", WAC2:"Weekly AM-PM Vitamin 2.0", WAPVX2:"Weekly AM-PM Vitamin XL 2.0",
+  WAPV2X2:"Weekly AM-PM Vitamin 2XL 2.0", WA2XC2:"Weekly AM-PM Vitamin 2XL 2.0", WAPV2XC2:"Weekly AM-PM Vitamin 2XL 2.0",
+  WPC:"Weekly Pill", WVC:"Weekly Vitamin", WVXC:"Weekly Vitamin XL", WV2XC:"Weekly Vitamin 2XL", WXSPC:"Weekly XS",
+  NPC:"Nano Pill", NVC:"Nano Vitamin",
+  MPC:"Mission Pill", MVC:"Mission Vitamin"
+};
+// AM-PM cases use BPC- prefix + two-color-pair SKUs; these codes route them to families
+const AMPM_CODES = new Set(["WAPPC2","WAC2","WAPVX2","WAPV2X2","WA2XC2","WAPV2XC2"]);
+// canonical families always shown (even with no stock yet, e.g. AM-PM 2XL)
+const CANON = ["Nano Pill","Nano Vitamin","Mission Pill","Mission Vitamin","Weekly XS","Weekly Pill","Weekly Vitamin","Weekly Vitamin XL","Weekly Vitamin 2XL","Weekly AM-PM Pill 2.0","Weekly AM-PM Vitamin 2.0","Weekly AM-PM Vitamin XL 2.0","MagNano Pill 1P","MagNano Pill 2P (AM-PM)"];
+// strip pack (CL/2P/3P), material, and copy (-2) suffixes so listings dedupe to one physical pool
+const SUFFIX = /-(CL|SM|HC|FN|ULTEM|ULT|2P|3P|2)$/i;
+function coreSku(sku){ return (sku||"").toUpperCase().replace(SUFFIX,""); }
+function familyOf(core){
+  const code = (core.split("-")[1]) || "";   // <PREFIX>-<CODE>-<COLOR>
+  return FAMILY[code] || code || "Other";
+}
+function colorOf(core){ const p=core.split("-"); return p.slice(2).join(" / ")||"—"; }
+
+let INV=[], invStatus="all", invOpen={};
+// launch-item velocity windows: shorter window until the item has ~90 days of sales history
+const EXCLUDE_FAMILIES = new Set(["HC","WVXALS","WVXPRS"]);   // non-case / engraving-set codes to hide
+function inclSku(sku){ const s=sku.toUpperCase(); const seg=s.split("-"); return s.startsWith("SPC-") || (s.startsWith("BPC-") && AMPM_CODES.has(seg[1])); }
+
+// ---- SKU Code Master: per-color Designation + Season/Launch timing drives the velocity window ----
+const MASTER_DS = "collection://db700244-7aae-465a-b996-290c7d17957a";
+let MASTER = {};   // COLORCODE -> {evergreen} | {start:Date, future:bool}
+const MONTHS = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+function dateRes(d){ return {evergreen:false, start:d, future: d>today0}; }
+function parseTiming(des, timing){
+  const t=(timing||"").toLowerCase(), D=(des||"").toUpperCase();
+  if(D==="CORE"||D==="SECRET MENU"||D==="RETIRED"||/evergreen|secret menu/.test(t)) return {evergreen:true};
+  let m;
+  if((m=t.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/))){ let y=+m[3]; if(y<100)y+=2000; return dateRes(new Date(y,+m[1]-1,+m[2])); }               // m/d/yy (e.g. restock 6/27/26)
+  if((m=t.match(/([a-z]{3,})\.?\s+(\d{1,2})\s+(\d{4})/)) && MONTHS[m[1].slice(0,3)]!==undefined) return dateRes(new Date(+m[3],MONTHS[m[1].slice(0,3)],+m[2])); // Mon D YYYY
+  if((m=t.match(/([a-z]{3,})\s*\/\s*[a-z]{3,}\s+(\d{4})/)) && MONTHS[m[1].slice(0,3)]!==undefined) return dateRes(new Date(+m[2],MONTHS[m[1].slice(0,3)],1)); // Mon/Mon YYYY
+  if((m=t.match(/([a-z]{3,})\s+(\d{4})/)) && MONTHS[m[1].slice(0,3)]!==undefined) return dateRes(new Date(+m[2],MONTHS[m[1].slice(0,3)],1));               // Mon YYYY
+  if(/spring/.test(t)) return season(0,3);    // Jan–Apr
+  if(/summer/.test(t)) return season(4,7);    // May–Aug
+  if(/fall|autumn/.test(t)) return season(8,11); // Sep–Dec
+  if(/winter/.test(t)) return season(11,1);   // Nov–Feb (wraps)
+  return {evergreen:true};   // unknown → treat as evergreen (90-day)
+}
+function season(s,e){ return {evergreen:false, seasonal:true, sStart:s, sEnd:e, start:new Date(today0.getFullYear(),s,1), future:false}; }
+function monthInSeason(m){ const mo=today0.getMonth(); return m.sStart<=m.sEnd ? (mo>=m.sStart&&mo<=m.sEnd) : (mo>=m.sStart||mo<=m.sEnd); }
+// true if the SKU is a seasonal color currently OUT of its season (so an OOS is expected, not a stockout)
+function isOffSeason(core){ return core.split("-").slice(2).some(cc=>{ const m=MASTER[cc]; return m && m.seasonal && !monthInSeason(m); }); }
+function snapWindow(win){ let best=90,bd=1e9; [15,30,60,90].forEach(o=>{const d=Math.abs(o-win); if(d<bd){bd=d;best=o;}}); return best; }
+// resolve the velocity window for a SKU core from its color code(s)
+function skuWindow(core){
+  const seg=core.split("-"), codes=seg.slice(2), isMGN2P=seg[1]==="MGN2P";
+  let anyFuture=false, evergreenAll=true, latestStart=null, known=false;
+  codes.forEach(cc=>{ const m=MASTER[cc]; if(!m) return; known=true;
+    if(m.future) anyFuture=true;
+    if(!m.evergreen){ evergreenAll=false; if(m.start && (!latestStart||m.start>latestStart)) latestStart=m.start; } });
+  if(anyFuture) return {future:true};
+  let win=90;
+  if(known && !evergreenAll && latestStart){ const days=Math.round((today0-latestStart)/864e5); win = days<=0?90:Math.min(90,Math.max(7,days)); }
+  if(isMGN2P) win=Math.min(win,30);   // MagNano Pill 2P (AM-PM) still ramping
+  return {future:false, windowDays:win};
+}
+async function loadInventory(){
+  try{
+    // SKU Code Master → per-color designation + launch/season timing (graceful if it fails)
+    try{
+      const mr=unwrap(await call(T.notion,{data:{mode:"sql",data_source_urls:[MASTER_DS],query:`SELECT "SKU Color Code" AS code, "Designation" AS des, "Season / Launch Timing" AS timing FROM "${MASTER_DS}" WHERE "Designation" IS NOT NULL AND "Designation" != '' LIMIT 300`}}));
+      MASTER={};
+      ((mr&&mr.results)||[]).forEach(x=>{ const code=(x.code||"").toUpperCase().trim(); if(code) MASTER[code]=parseTiming(x.des,x.timing); });
+    }catch(_){ MASTER={}; }
+    // Shopify on-hand + velocity over multiple windows so launch items can use a shorter, representative velocity
+    const q = d => `FROM inventory SHOW ending_inventory_units, inventory_units_sold GROUP BY product_variant_sku ORDER BY inventory_units_sold DESC LIMIT 1000 SINCE -${d}d UNTIL today`;
+    const [r90,r60,r30,r15] = await Promise.all([
+      call(T.shopify,{query:q(90)}), call(T.shopify,{query:q(60)}),
+      call(T.shopify,{query:q(30)}), call(T.shopify,{query:q(15)})
+    ]);
+    const agg = {}; // core -> {onhand, s90, s60, s30, s15}
+    const fold = (resp,key,useOnhand)=>{
+      shopifyRows(unwrap(resp)).rows.forEach(r=>{
+        const sku=(r[0]||"").toUpperCase(); if(!inclSku(sku)) return;
+        const c=coreSku(sku); const end=+r[1]||0, sold=+r[2]||0;
+        if(!agg[c]) agg[c]={onhand:0,s90:0,s60:0,s30:0,s15:0};
+        if(useOnhand && end>agg[c].onhand) agg[c].onhand=end; // representative pool: max across pack/copy listings
+        agg[c][key]+=sold;
+      });
+    };
+    fold(r90,'s90',true); fold(r60,'s60',false); fold(r30,'s30',false); fold(r15,'s15',false);
+
+    INV = Object.keys(agg).map(c=>{
+      const a=agg[c], oh=a.onhand;
+      const w=skuWindow(c);
+      if(w.future){   // color hasn't started selling yet (future launch / not-yet-relaunched)
+        return {core:c, family:familyOf(c), color:colorOf(c), onhand:oh, sold90:a.s90, vel:0, basis:"pre", doh:Infinity, tag:{cls:"t-purple",txt:"Pre-launch",rank:6}};
+      }
+      const W=snapWindow(w.windowDays);
+      const sold = W===15?a.s15 : W===30?a.s30 : W===60?a.s60 : a.s90;
+      const vel = sold/W, basis = W+"d";
+      const doh = vel>0 ? oh/vel : (oh<=0?0:Infinity);
+      let tag;
+      if(oh<=0 && isOffSeason(c)) tag={cls:"t-gray",txt:"Off-season",rank:7};   // seasonal color, out of season → not a stockout
+      else if(oh<=0) tag={cls:"t-red",txt:"Out of stock",rank:0};
+      else if(vel<=0) tag={cls:"t-gray",txt:"No recent sales",rank:5};
+      else if(doh<LOW_MAX) tag={cls:"t-amber",txt:"Low",rank:1};
+      else if(doh<=HEALTHY_MAX) tag={cls:"t-green",txt:"Healthy",rank:2};
+      else tag={cls:"t-blue",txt:"Overstock",rank:3};
+      return {core:c, family:familyOf(c), color:colorOf(c), onhand:oh, sold90:a.s90, vel, basis, doh, tag};
+    }).filter(i=>!EXCLUDE_FAMILIES.has(i.family));
+    buildInvFilters();
+    renderInv();
+    updateAlerts();
+  }catch(e){
+    document.getElementById("invtable").innerHTML=`<div class="err">Inventory unavailable: ${esc(e.message)}</div>`;
+  }
+}
+function matchStatus(i){
+  if(invStatus==='all') return true;
+  const r=i.tag.rank;
+  return (invStatus==='oos'&&r===0)||(invStatus==='low'&&r===1)||(invStatus==='healthy'&&r===2)||(invStatus==='over'&&r===3)||(invStatus==='nosale'&&r===5)||(invStatus==='pre'&&r===6)||(invStatus==='off'&&r===7);
+}
+function groupFamilies(){
+  const map={};
+  INV.forEach(i=>{ (map[i.family]=map[i.family]||[]).push(i); });
+  CANON.forEach(n=>{ if(!map[n]) map[n]=[]; });   // show canonical families even with no stock
+  return Object.keys(map).map(name=>{
+    const items=map[name].slice().sort((a,b)=>a.tag.rank-b.tag.rank||a.doh-b.doh);
+    const empty=items.length===0;
+    const onhand=items.reduce((s,i)=>s+i.onhand,0);
+    const sold90=items.reduce((s,i)=>s+i.sold90,0);
+    const vel=items.reduce((s,i)=>s+(i.vel||0),0);            // sum of per-item windowed velocity
+    const doh=empty?null:(vel>0?onhand/vel:(onhand<=0?0:Infinity));
+    const launchBasis=[...new Set(items.filter(i=>i.basis&&i.basis!=='90d').map(i=>i.basis))].sort();
+    const sc={oos:0,low:0,healthy:0,over:0,nosale:0};
+    items.forEach(i=>{const r=i.tag.rank; if(r===0)sc.oos++;else if(r===1)sc.low++;else if(r===2)sc.healthy++;else if(r===3)sc.over++;else sc.nosale++;});
+    let tag;
+    if(empty) tag={cls:'t-gray',txt:'No SKUs yet'};
+    else if(onhand<=0) tag={cls:'t-red',txt:'Out of stock'};
+    else if(vel<=0) tag={cls:'t-gray',txt:'No recent sales'};
+    else if(doh<LOW_MAX) tag={cls:'t-amber',txt:'Low'};
+    else if(doh<=HEALTHY_MAX) tag={cls:'t-green',txt:'Healthy'};
+    else tag={cls:'t-blue',txt:'Overstock'};
+    return {name,items,onhand,sold90,vel,doh,sc,tag,empty,launchBasis};
+  }).sort((a,b)=>{
+    const ai=CANON.indexOf(a.name), bi=CANON.indexOf(b.name);   // fixed family order
+    const av=ai<0?999:ai, bv=bi<0?999:bi;
+    return av!==bv ? av-bv : a.name.localeCompare(b.name);
+  });
+}
+function buildInvFilters(){
+  const c={all:INV.length,oos:0,low:0,healthy:0,over:0,nosale:0,pre:0,off:0};
+  INV.forEach(i=>{const r=i.tag.rank; if(r===0)c.oos++;else if(r===1)c.low++;else if(r===2)c.healthy++;else if(r===3)c.over++;else if(r===6)c.pre++;else if(r===7)c.off++;else c.nosale++;});
+  const total=INV.length||1;
+  const defs=[["all","All"],["oos","Out of stock"],["low","Low"],["healthy","Healthy"],["over","Overstock"],["nosale","No recent sales"],["pre","Pre-launch"],["off","Off-season"]];
+  const el=document.getElementById("invfilters");
+  el.innerHTML = defs.map(([k,l])=>{ const n=c[k]||0; const lbl = k==='all' ? `${l} (${n})` : `${l} (${n} · ${Math.round(n/total*100)}%)`; return `<div class="chip ${invStatus===k?'active':''}" data-s="${k}">${lbl}</div>`; }).join("")
+    + `<div class="chip" data-x="expand">Expand all</div><div class="chip" data-x="collapse">Collapse all</div>`;
+  el.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{
+    if(ch.dataset.x==='expand'){ groupFamilies().forEach(g=>invOpen[g.name]=true); }
+    else if(ch.dataset.x==='collapse'){ invOpen={}; }
+    else {
+      invStatus=ch.dataset.s;
+      if(invStatus!=='all'){ groupFamilies().forEach(g=>{ if(g.items.some(matchStatus)) invOpen[g.name]=true; }); }
+    }
+    buildInvFilters(); renderInv();
+  });
+}
+function skuTable(rows){
+  if(!rows.length) return '<div class="muted small" style="padding:8px 10px">No SKUs in this status.</div>';
+  let h='<table><thead><tr><th>Color</th><th>SKU</th><th class="num">On hand</th><th class="num">90d sold</th><th class="num">Units/day</th><th class="num">Days on hand</th><th>Status</th></tr></thead><tbody>';
+  rows.forEach(r=>{
+    const dohTxt=r.doh===Infinity?"∞":(r.tag.rank===0?"0":Math.round(r.doh).toLocaleString());
+    h+=`<tr><td>${esc(r.color)}</td><td class="small muted">${esc(r.core)}</td><td class="num">${fmtNum(r.onhand)}</td>`+
+       `<td class="num">${fmtNum(r.sold90)}</td><td class="num">${r.vel?r.vel.toFixed(1):"—"}${r.basis&&r.basis!=='90d'?` <span class="cc t-purple">${r.basis}</span>`:""}</td><td class="num">${dohTxt}</td>`+
+       `<td><span class="tag ${r.tag.cls}">${r.tag.txt}</span></td></tr>`;
+  });
+  h+='</tbody></table>'; return h;
+}
+function renderInv(){
+  const groups=groupFamilies();
+  let html='', shown=0;
+  groups.forEach(g=>{
+    const rows=g.items.filter(matchStatus);
+    if(invStatus!=='all' && rows.length===0) return;
+    shown++;
+    const open=!!invOpen[g.name];
+    const dohTxt=g.empty?"—":(g.doh===Infinity?"∞":(g.onhand<=0?"0":Math.round(g.doh).toLocaleString()));
+    const cc=[];
+    if(g.sc.oos)cc.push(`<span class="cc t-red">${g.sc.oos} OOS</span>`);
+    if(g.sc.low)cc.push(`<span class="cc t-amber">${g.sc.low} low</span>`);
+    if(g.sc.healthy)cc.push(`<span class="cc t-green">${g.sc.healthy} healthy</span>`);
+    if(g.sc.over)cc.push(`<span class="cc t-blue">${g.sc.over} over</span>`);
+    if(g.sc.nosale)cc.push(`<span class="cc t-gray">${g.sc.nosale} no sales</span>`);
+    html+=`<div class="fam ${open?'open':''}">
+      <div class="fam-head" data-toggle="${esc(g.name)}">
+        <div class="caret">▶</div>
+        <div><div class="fam-name">${esc(g.name)} <span class="tag ${g.tag.cls}" style="margin-left:4px">${g.tag.txt}</span>${g.launchBasis&&g.launchBasis.length?` <span class="cc t-purple">⚡ ${g.launchBasis.join(" / ")} velocity</span>`:""}</div><div class="countchips">${cc.join("")}</div></div>
+        <div class="fam-metric"><div class="m-l">On hand</div><div class="m-v">${fmtNum(g.onhand)}</div></div>
+        <div class="fam-metric"><div class="m-l">Velocity/day</div><div class="m-v">${g.vel?g.vel.toFixed(1):"—"}</div></div>
+        <div class="fam-metric"><div class="m-l">Days left</div><div class="m-v">${dohTxt}</div></div>
+        <div class="fam-metric"><div class="m-l">SKUs</div><div class="m-v">${g.items.length}</div></div>
+      </div>
+      <div class="fam-body">${g.empty?'<div class="muted small" style="padding:8px 10px">No SKUs in Shopify yet — this family will populate automatically once stock is created.</div>':skuTable(rows)}</div>
+    </div>`;
+  });
+  if(!shown) html='<div class="muted small">No SKUs match this status.</div>';
+  const box=document.getElementById("invtable"); box.innerHTML=html;
+  box.querySelectorAll(".fam-head").forEach(h=>h.onclick=()=>{ const n=h.dataset.toggle; invOpen[n]=!invOpen[n]; renderInv(); });
+}
+
+// ---------- date / delay helpers ----------
+function parseDate(s){ if(!s) return null; const d=new Date(s.length<=10? s+"T00:00:00": s); return isNaN(d)?null:d; }
+function isDelivered(status){ return /delivered|done/i.test(status||""); }
+function delayTag(etaStr, status){
+  if(isDelivered(status)) return {cls:"t-green",txt:"Delivered",rank:2};
+  const eta=parseDate(etaStr);
+  if(!eta) return {cls:"t-gray",txt:"No ETA",rank:1};
+  if(eta<today0) return {cls:"t-red",txt:"Delayed",rank:0};
+  const days=Math.round((eta-today0)/864e5);
+  if(days<=7) return {cls:"t-amber",txt:"On track · "+days+"d",rank:1};
+  return {cls:"t-green",txt:"On track",rank:2};
+}
+function jsonArr(s){ try{const a=JSON.parse(s);return Array.isArray(a)?a:[];}catch(_){return [];} }
+
+// ---------- SHIPMENTS ----------
+async function loadShipments(){
+  try{
+    // active (all suppliers) from Incoming Shipments; recently-delivered from BSH Only. Both views return the title under "".
+    const [av,bv]=await Promise.all([
+      call(T.notion,{data:{mode:"view",view_url:SHIP_VIEW,page_size:100}}),
+      call(T.notion,{data:{mode:"view",view_url:BSH_VIEW,page_size:100}}),
+    ]);
+    const A=unwrap(av), B=unwrap(bv);
+    const mk=r=>{
+      const o={ __title:r[""] ?? r["title"] ?? "", __eta:r["date:ETA Ikigai WHS:start"]||null,
+        Products:r["Products"], Status:r["Status"], "Shipping Method":r["Shipping Method"],
+        Cartons:r["Cartons"], PCS:r["PCS"], __id:(r.url||"").split("/").pop() };
+      o.__tag=delayTag(o.__eta,o.Status);
+      return o;
+    };
+    const cutoff=new Date(today0.getTime()-14*864e5);   // delivered within the last 2 weeks (by warehouse ETA)
+    const active=((A&&A.results)||[]).map(mk);
+    const activeIds=new Set(active.map(r=>r.__id));
+    const delivered=((B&&B.results)||[]).map(mk).filter(r=>{
+      if(r.Status!=='✅ Delivered' || activeIds.has(r.__id)) return false;
+      const e=parseDate(r.__eta); return e && e>=cutoff && e<=today0;
+    });
+    const rows=[...active,...delivered];
+    rows.sort((a,b)=>{
+      const ad=a.Status==='✅ Delivered'?1:0, bd=b.Status==='✅ Delivered'?1:0;
+      if(ad!==bd) return ad-bd;                                   // active first, delivered grouped at bottom
+      if(ad&&bd) return (parseDate(b.__eta)||0)-(parseDate(a.__eta)||0); // delivered: most recent first
+      return a.__tag.rank-b.__tag.rank || (parseDate(a.__eta)||9e15)-(parseDate(b.__eta)||9e15);
+    });
+    window.__ship=rows; renderShip(rows); updateAlerts();
+  }catch(e){ document.getElementById("shiptable").innerHTML=`<div class="err">Shipments unavailable: ${esc(e.message)}</div>`; }
+}
+function prettyList(s){ const a=jsonArr(s); if(!a.length) return "—"; return a.length>3? a.slice(0,3).join(", ")+" +"+(a.length-3):a.join(", "); }
+function renderShip(rows){
+  if(!rows.length){document.getElementById("shiptable").innerHTML='<div class="muted small">No active shipments.</div>';return;}
+  let h='<table><thead><tr><th>Name</th><th>Products</th><th>Status</th><th>Method</th><th>ETA Ikigai WHS</th><th class="num">Cartons</th><th class="num">PCS</th><th>Flag</th></tr></thead><tbody>';
+  rows.forEach(r=>{
+    h+=`<tr><td class="small">${esc(r.__title||"—")}</td><td class="small">${esc(prettyList(r["Products"]))}</td><td class="small">${esc(r["Status"]||"—")}</td>`+
+       `<td class="small">${esc((jsonArr(r["Shipping Method"])[0])||"—")}</td><td class="small">${esc(r.__eta||"—")}</td>`+
+       `<td class="num">${r["Cartons"]!=null?fmtNum(r["Cartons"]):"—"}</td><td class="num">${r["PCS"]!=null?fmtNum(r["PCS"]):"—"}</td>`+
+       `<td><span class="tag ${r.__tag.cls}">${r.__tag.txt}</span></td></tr>`;
+  });
+  h+='</tbody></table>';
+  document.getElementById("shiptable").innerHTML=h;
+}
+
+// ---------- PRODUCTION ----------
+async function loadProduction(){
+  try{
+    // supplier url -> name map
+    let supMap={};
+    try{
+      const s=unwrap(await call(T.notion,{data:{mode:"sql",data_source_urls:[SUP_DS],query:`SELECT url,"Supplier Name" FROM "${SUP_DS}" LIMIT 200`}}));
+      ((s&&s.results)||[]).forEach(x=>{ supMap[x.url]=x["Supplier Name"]; });
+    }catch(_){}
+    const q=`SELECT "Name","Product","Status","Supplier","[F] PCS" AS pcs,"date:Due Date:start" AS due,"date:[F] Delivery Date:start" AS deliv FROM "${PROD_DS}" WHERE "Status" NOT IN ('Done','✅ Delivered') LIMIT 60`;
+    const d=unwrap(await call(T.notion,{data:{mode:"sql",data_source_urls:[PROD_DS],query:q}}));
+    const rows=(d&&d.results)||[];
+    rows.forEach(r=>{
+      const supUrls=jsonArr(r.Supplier);
+      r.__sup = supUrls.map(u=>supMap[u]||"").filter(Boolean).join(", ")||"—";
+      r.__tag = delayTag(r.due, r.Status);
+    });
+    rows.sort((a,b)=> a.__tag.rank-b.__tag.rank || (parseDate(a.due)||9e15)-(parseDate(b.due)||9e15));
+    window.__prod=rows; renderProd(rows); updateAlerts();
+  }catch(e){ document.getElementById("prodtable").innerHTML=`<div class="err">Production unavailable: ${esc(e.message)}</div>`; }
+}
+function renderProd(rows){
+  if(!rows.length){document.getElementById("prodtable").innerHTML='<div class="muted small">No active production runs.</div>';return;}
+  let h='<table><thead><tr><th>Run</th><th>Product</th><th>Supplier</th><th>Status</th><th>Due date</th><th class="num">PCS</th><th>Flag</th></tr></thead><tbody>';
+  rows.forEach(r=>{
+    h+=`<tr><td class="small">${esc(r.Name||"—")}</td><td class="small">${esc(prettyList(r.Product))}</td>`+
+       `<td class="small">${esc(r.__sup)}</td><td class="small">${esc(r.Status||"—")}</td>`+
+       `<td class="small">${esc(r.due||"—")}</td><td class="num">${r.pcs!=null?fmtNum(r.pcs):"—"}</td>`+
+       `<td><span class="tag ${r.__tag.cls}">${r.__tag.txt}</span></td></tr>`;
+  });
+  h+='</tbody></table>';
+  document.getElementById("prodtable").innerHTML=h;
+}
+
+// ---------- KPIs + ALERTS ----------
+function renderKpis(){
+  const oos = INV.filter(i=>i.tag.rank===0).length;
+  const low = INV.filter(i=>i.tag.rank===1).length;
+  const shipDelayed=(window.__ship||[]).filter(r=>r.__tag.rank===0).length;
+  const prodDelayed=(window.__prod||[]).filter(r=>r.__tag.rank===0).length;
+  const cards=[
+    {label:"SKUs out of stock", value:INV.length?String(oos):"…"},
+    {label:"Low stock (<30 days)", value:INV.length?String(low):"…"},
+    {label:"Delayed shipments", value:(window.__ship)?String(shipDelayed):"…"},
+    {label:"Delayed production", value:(window.__prod)?String(prodDelayed):"…"},
+  ];
+  document.getElementById("kpis").innerHTML = cards.map(c=>
+    `<div class="kpi"><div class="label">${c.label}</div><div class="value">${c.value}</div>${c.extra||""}</div>`).join("");
+}
+function updateAlerts(){
+  renderKpis();
+  const alerts=[];
+  INV.filter(i=>i.tag.rank===0 && i.vel>0).sort((a,b)=>b.vel-a.vel).slice(0,6)
+    .forEach(i=>alerts.push(`<span class="tag t-red">OOS</span> <b>${esc(i.family)} ${esc(i.color)}</b> — sells ${i.vel.toFixed(1)}/day, on hand 0`));
+  INV.filter(i=>i.tag.rank===1).sort((a,b)=>a.doh-b.doh).slice(0,5)
+    .forEach(i=>alerts.push(`<span class="tag t-amber">LOW</span> <b>${esc(i.family)} ${esc(i.color)}</b> — ~${Math.round(i.doh)} days left`));
+  (window.__ship||[]).filter(r=>r.__tag.rank===0).slice(0,5)
+    .forEach(r=>alerts.push(`<span class="tag t-red">SHIPMENT</span> ${esc(r.__title||prettyList(r["Products"]))} — ETA ${esc(r.__eta)} passed (${esc(r["Status"])})`));
+  (window.__prod||[]).filter(r=>r.__tag.rank===0).slice(0,5)
+    .forEach(r=>alerts.push(`<span class="tag t-red">PRODUCTION</span> ${esc(r.Name||prettyList(r.Product))} past due ${esc(r.due)} (${esc(r.__sup)})`));
+  const bar=document.getElementById("alertbar");
+  if(!alerts.length){ bar.className="alertbar ok"; bar.innerHTML='<h2>✅ No critical issues detected</h2><div class="small muted">No out-of-stock movers, delayed shipments, or overdue production runs.</div>'; }
+  else { bar.className="alertbar"; bar.innerHTML='<h2>🚨 Needs attention ('+alerts.length+')</h2>'+alerts.map(a=>`<div class="alert-item">${a}</div>`).join(""); }
+}
+
+// ---------- boot ----------
+document.getElementById("asof").textContent = "Live · "+TODAY.toLocaleString();
+renderKpis();
+loadSales();
+loadInventory();
+loadShipments();
+loadProduction();
+</script>
+</body>
+</html>
